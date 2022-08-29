@@ -1329,7 +1329,8 @@ root_hair <- function(rs1, params, center){
                rank = rank(euc))
       if(length(tmp_cell$out[tmp_cell$out == "out"])>2){
         junc <- tmp_cell[tmp_cell$out == "out" & tmp_cell$euc != max(tmp_cell$euc),]
-        # draw line in between the center of the cross section and the cell mass center
+        
+      # draw line in between the center of the cross section and the cell mass center
         x1 <- tmp_cell$mx[1]
         y1 <- tmp_cell$my[1]
         m <- (y1-y0)/(x1-x0)
@@ -1345,8 +1346,8 @@ root_hair <- function(rs1, params, center){
         di <- rbind(tibble(euc = sqrt((x0-x2_p)^2+(y0-y2_p)^2), pm = "p"), 
                     tibble(euc = sqrt((x0-x2_m)^2+(y0-y2_m)^2), pm = "m"))
         if(di$pm[di$euc == max(di$euc)] == "p"){
-          tmp_cell$x[tmp_cell$euc == max(tmp_cell$euc)] <- x2_p
-          tmp_cell$y[tmp_cell$euc == max(tmp_cell$euc)] <- y2_p
+         # tmp_cell$x[tmp_cell$euc == max(tmp_cell$euc)] <- x2_p
+         # tmp_cell$y[tmp_cell$euc == max(tmp_cell$euc)] <- y2_p
           
           #central point of the root hair apex
           x3 <- (x1+y1*m-d*m+sqrt(sigy))/(1+m^2)
@@ -1367,15 +1368,19 @@ root_hair <- function(rs1, params, center){
           junc$x[junc$atan == max(junc$atan)] <- x5
           junc$y[junc$atan == max(junc$atan)] <- y5
           
-          tmp_cell <- rbind(tmp_cell, junc)%>%
-            mutate(my = mean(y),
+          junky <- rbind(junc, tmp_cell[tmp_cell$out == "out",])%>%
+            mutate(id_cell = id_cell + 1,
+                   my = mean(y),
                    mx = mean(x),
                    atan = atan2(y-my, x - mx))%>%
-            arrange(atan)%>%
-            filter(!duplicated(atan))
+            arrange(atan)
+          
+          
+          
+          tmp_cello <- concavety(rbind(tmp_cell, junky)%>%mutate(id_point = paste0(round(x,8),";",round(y,8))))
         }else{
-          tmp_cell$x[tmp_cell$euc == max(tmp_cell$euc)] <- x2_m
-          tmp_cell$y[tmp_cell$euc == max(tmp_cell$euc)] <- y2_m
+          #tmp_cell$x[tmp_cell$euc == max(tmp_cell$euc)] <- x2_m
+          #tmp_cell$y[tmp_cell$euc == max(tmp_cell$euc)] <- y2_m
           
           #central point of the root hair apex
           x3 <- (x1+y1*m-d*m-sqrt(sigy))/(1+m^2)
@@ -1396,25 +1401,38 @@ root_hair <- function(rs1, params, center){
           junc$x[junc$atan == max(junc$atan)] <- x5
           junc$y[junc$atan == max(junc$atan)] <- y5
           
-          tmp_cell <- rbind(tmp_cell, junc)%>%
-            mutate(my = mean(y),
+          junky <- rbind(junc, tmp_cell[tmp_cell$out == "out",])%>%
+            mutate(id_cell = id_cell + 1,
+                   my = mean(y),
                    mx = mean(x),
                    atan = atan2(y-my, x - mx))%>%
-            arrange(atan)%>%
-            filter(!duplicated(atan))
+            arrange(atan)
+          
+          tmp_cello <- concavety(rbind(tmp_cell, junky)%>%mutate(id_point = paste0(round(x,8),";",round(y,8))))
           
         }
         
-      }
+      }else{id_h = id_h[id_h != h]}
+      tmp_cello$id_cell = tmp_cell$id_cell[1]
       # make a binding table with all root hair
-      hairy <- rbind(hairy, tmp_cell)
+      hairy <- rbind(hairy, tmp_cello)
       
     }
+    
+    
+    # print(hairy%>%
+    #         ggplot()+
+    #         geom_polygon(aes(x,y, group = id_cell, fill = type), colour = "white")+
+    #         geom_point(aes(x,y))+
+    #         geom_polygon(aes(x,y, group = id_cell, fill = type), colour = "white",data = rs1[rs1$id_cell %!in% id_h,])+
+    #         coord_fixed()+
+    #         theme_classic())
+
+
     rs1 <- rs1[rs1$id_cell %!in% id_h,]
     rs1$euc <- sqrt((x0-rs1$x)^2 + (y0-rs1$y)^2)
     rs1$out <- "none"
-    rs8 <- rbind(rs1,hairy%>%select(-rank))%>%
-      arrange(id_cell, atan)
+    rs8 <- rbind(rs1,hairy%>%select(-rank))
   }
   
   return(rs8)
